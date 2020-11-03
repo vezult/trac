@@ -19,7 +19,7 @@ pub struct TracConfig {
 pub struct TracReviewer {
     pub name: String,
     pub aliases: Vec<String>,
-    pub email: String
+    pub email: String,
 }
 
 #[derive(Debug)]
@@ -32,7 +32,7 @@ impl TracAction {
     fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            description: "".to_string()
+            description: "".to_string(),
         }
     }
 }
@@ -244,11 +244,16 @@ impl TracTicket {
         format!("{}://{}{}ticket/{}", scheme, &conf.host, &conf.path, id)
     }
 
-    fn modify_attributes(&self, attributes: Vec<(String, String)>, comment: Option<String>, trac: &Trac) -> Result<(),()> {
+    fn modify_attributes(
+        &self,
+        attributes: Vec<(String, String)>,
+        comment: Option<String>,
+        trac: &Trac,
+    ) -> Result<(), ()> {
         let transport = trac.get_transport();
         let modify_comment = match comment {
             Some(c) => c,
-            None => "".to_string()
+            None => "".to_string(),
         };
 
         let mut ticket_attributes: BTreeMap<String, Value> = BTreeMap::new();
@@ -261,18 +266,20 @@ impl TracTicket {
             .arg(Value::Struct(ticket_attributes));
 
         match xmlrpc_req.call(transport) {
-            Ok(r) => {
-                Ok(())
-            }
+            Ok(r) => Ok(()),
             Err(e) => {
                 eprintln!("\nError: {}\n", &e);
                 Err(())
             }
         }
-
     }
 
-    fn apply_action(&self, action: TracAction, comment: Option<String>, trac: &Trac) -> Result<(),()> {
+    fn apply_action(
+        &self,
+        action: TracAction,
+        comment: Option<String>,
+        trac: &Trac,
+    ) -> Result<(), ()> {
         let transport = trac.get_transport();
         self.modify_attributes(vec![("action".to_string(), action.name)], comment, trac)
     }
@@ -284,22 +291,26 @@ impl TracTicket {
 
     pub fn request_review(&self, reviewer: String, trac: &Trac) -> Result<(), ()> {
         self.set_reviewer(reviewer.clone(), trac);
-        self.apply_action(TracAction::new("peer_review"), Some(format!("Sent to {} for review", reviewer)), trac)
+        self.apply_action(
+            TracAction::new("peer_review"),
+            Some(format!("Sent to {} for review", reviewer)),
+            trac,
+        )
     }
 
-    pub fn review_fail(&self, reason: String, trac: &Trac) -> Result<(),()> {
+    pub fn review_fail(&self, reason: String, trac: &Trac) -> Result<(), ()> {
         self.apply_action(TracAction::new("reject"), Some(reason), trac)
     }
 
-    pub fn review_pass(&self, comment: Option<String>, trac: &Trac) -> Result<(),()> {
+    pub fn review_pass(&self, comment: Option<String>, trac: &Trac) -> Result<(), ()> {
         self.apply_action(TracAction::new("pass_peer_review"), comment, trac)
     }
 
-    pub fn release(&self, comment: Option<String>, trac: &Trac) -> Result<(),()> {
+    pub fn release(&self, comment: Option<String>, trac: &Trac) -> Result<(), ()> {
         self.apply_action(TracAction::new("leave"), comment, trac)
     }
 
-    pub fn accept(&self, estimate: bool, comment: Option<String>, trac: &Trac) -> Result<(),()> {
+    pub fn accept(&self, estimate: bool, comment: Option<String>, trac: &Trac) -> Result<(), ()> {
         let action_name = if estimate {
             "accept"
         } else {
@@ -309,11 +320,11 @@ impl TracTicket {
         self.apply_action(TracAction::new(action_name), comment, trac)
     }
 
-    pub fn reopen(&self, comment: Option<String>, trac: &Trac) -> Result<(),()> {
+    pub fn reopen(&self, comment: Option<String>, trac: &Trac) -> Result<(), ()> {
         self.apply_action(TracAction::new("reopen"), comment, trac)
     }
 
-    pub fn close(&self, comment: Option<String>, trac: &Trac) -> Result<(),()> {
+    pub fn close(&self, comment: Option<String>, trac: &Trac) -> Result<(), ()> {
         self.apply_action(TracAction::new("resolve"), comment, trac)
     }
 
